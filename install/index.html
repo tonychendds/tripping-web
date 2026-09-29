@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/tripping-web/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/tripping-web/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/tripping-web/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/tripping-web/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/tripping-web/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Add the Tripping icon to your iPhone, iPad, or Android home screen." />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0A3A70" />
+    <title>Add Tripping to your home screen</title>
+    <script>
+      try {
+        var stored = localStorage.getItem("tripping-theme")
+        var dark =
+          stored === "dark" ||
+          (stored !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)
+        if (dark) {
+          document.documentElement.classList.add("dark")
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute("content", "#071E36")
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      @font-face {
+        font-family: "Fraunces Variable";
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 900;
+        src: url("/tripping-web/assets/fraunces-latin-wght-normal-ukD16Tqj.woff2") format("woff2-variations");
+      }
+      @font-face {
+        font-family: "Outfit Variable";
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 900;
+        src: url("/tripping-web/assets/outfit-latin-wght-normal-Bc-8i84L.woff2") format("woff2-variations");
+      }
+      :root {
+        color-scheme: light;
+        --bg: #f3f7f8;
+        --wash: #0e6f961a;
+        --warm-wash: #0a3a7012;
+        --ink: #12202c;
+        --muted: #4d6270;
+        --line: #d5e2e8;
+        --card: #fbfdfe;
+        --accent: #0c5e88;
+        --on-accent: #f7fbfc;
+        --hero-bg: #0a3a70;
+        --hero-ink: #f4fafb;
+        --hero-muted: #c5dbe6;
+        --sans: "Outfit Variable", "Avenir Next", "Segoe UI", sans-serif;
+        --serif: "Fraunces Variable", "Iowan Old Style", Palatino, serif;
+      }
+      html.dark {
+        color-scheme: dark;
+        --bg: #0c141c;
+        --wash: #16a4b81a;
+        --warm-wash: #0a3a7033;
+        --ink: #e8f1f5;
+        --muted: #b7c9d4;
+        --line: #243440;
+        --card: #14202a;
+        --accent: #7dcee0;
+        --on-accent: #062033;
+        --hero-bg: #0d2f52;
+        --hero-ink: #f4fafb;
+        --hero-muted: #c5dbe6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        font-family: var(--sans);
+        font-size: 17px;
+        line-height: 1.45;
+        color: var(--ink);
+        background:
+          radial-gradient(880px 420px at -10% -10%, var(--wash), transparent 60%),
+          radial-gradient(640px 320px at 110% -8%, var(--warm-wash), transparent 55%),
+          var(--bg);
+        text-rendering: optimizelegibility;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: var(--accent); text-underline-offset: 3px; }
+      .wrap {
+        width: min(720px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 calc(36px + env(safe-area-inset-bottom));
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .brand img {
+        width: 64px;
+        height: 64px;
+        display: block;
+        flex: none;
+      }
+      .kicker {
+        margin: 0;
+        color: var(--muted);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        font-weight: 650;
+      }
+      h1 {
+        margin: 2px 0 0;
+        font-family: var(--serif);
+        font-weight: 560;
+        font-size: clamp(2rem, 7vw, 2.7rem);
+        letter-spacing: -0.035em;
+        line-height: 0.98;
+      }
+      .lede {
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 1.05rem;
+        max-width: 38rem;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 22px 0 8px;
+      }
+      .home {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 20px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 650;
+        text-decoration: none;
+      }
+      .home:focus-visible,
+      .text-link:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+      .text-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        padding: 0 4px;
+        font-weight: 600;
+      }
+      .note {
+        margin: 8px 0 28px;
+        color: var(--muted);
+        font-size: 0.98rem;
+        max-width: 40rem;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px 18px 8px;
+        margin: 0 0 14px;
+        box-shadow: 0 18px 40px #0c284814;
+      }
+      html.dark section { box-shadow: 0 18px 40px #0006; }
+      section h2 {
+        margin: 0 0 4px;
+        font-family: var(--serif);
+        font-weight: 560;
+        font-size: 1.55rem;
+        letter-spacing: -0.03em;
+      }
+      .platform {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: step;
+      }
+      li {
+        counter-increment: step;
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        gap: 10px;
+        align-items: start;
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+      }
+      li::before {
+        content: counter(step);
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: #0a3a70;
+        color: #f4fafb;
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+      html.dark li::before { background: #16a4b8; color: #062033; }
+      li strong { font-weight: 650; }
+      .glyph {
+        display: inline-block;
+        vertical-align: -3px;
+        margin: 0 2px;
+      }
+      .fallback {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      footer {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      footer a { font-weight: 650; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="brand">
+        <img src="/tripping-web/icon.svg" width="64" height="64" alt="" />
+        <div>
+          <p class="kicker">Tripping</p>
+          <h1>Add to your home screen</h1>
+        </div>
+      </header>
+
+      <p class="lede">
+        Tripping is a progressive web app. After the icon is on your home screen, it opens full screen, and the trips saved on this device open without a connection. Weather and other live extras still need the internet.
+      </p>
+
+      <div class="actions">
+        <a class="home" href="https://tonychendds.github.io/tripping-web/">Open Tripping</a>
+        <a class="text-link" href="https://tonychendds.github.io/tripping-web/">Back to the app</a>
+      </div>
+      <p class="note">
+        Open the app link above in the browser named below, then follow the steps. Add the home page, not this instructions page, so the icon opens your trips.
+      </p>
+
+      <section aria-labelledby="ios-title">
+        <h2 id="ios-title">iPhone / iPad</h2>
+        <p class="platform">Use Safari. On iOS, Add to Home Screen is in Safari, not in Chrome or other browsers.</p>
+        <ol>
+          <li>Open <a href="https://tonychendds.github.io/tripping-web/">Tripping</a> in Safari.</li>
+          <li>
+            Tap <strong>Share</strong>
+            <svg class="glyph" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3.5v10.2M8.2 7.2 12 3.5l3.8 3.7M6.5 11.5V19a1.5 1.5 0 0 0 1.5 1.5h8A1.5 1.5 0 0 0 17.5 19v-7.5"/>
+            </svg>
+            (the square with an arrow). On iPhone it sits at the bottom of Safari. On iPad it is in the toolbar at the top.
+          </li>
+          <li>Tap <strong>Add to Home Screen</strong>. If you do not see it, scroll the row of actions in the share sheet.</li>
+          <li>Check the name and icon, then tap <strong>Add</strong>.</li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="android-title">
+        <h2 id="android-title">Android</h2>
+        <p class="platform">Use Chrome.</p>
+        <ol>
+          <li>Open <a href="https://tonychendds.github.io/tripping-web/">Tripping</a> in Chrome.</li>
+          <li>
+            Tap the menu
+            <svg class="glyph" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="5" r="1.8" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+              <circle cx="12" cy="19" r="1.8" fill="currentColor"/>
+            </svg>
+            (three dots).
+          </li>
+          <li>Tap <strong>Install app</strong>, <strong>Add to Home screen</strong>, or <strong>Install</strong>. The wording varies by Chrome version.</li>
+          <li>Confirm.</li>
+        </ol>
+        <p class="fallback">
+          If Install is not in the menu, choose <strong>Add to Home screen</strong> from that same menu, or use the Install banner when Chrome shows one.
+        </p>
+      </section>
+
+      <footer>
+        <a href="https://tonychendds.github.io/tripping-web/">Open Tripping</a>
+      </footer>
+    </div>
+  </body>
+</html>
