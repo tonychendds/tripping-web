@@ -1,4 +1,4 @@
-const CACHE = "tripping-shell-v2"
+const CACHE = "tripping-shell-v3"
 const BASE = new URL("./", self.location).pathname
 const asset = (path) => `${BASE}${path}`
 const PRECACHE = [
@@ -15,6 +15,7 @@ const PRECACHE = [
   asset("icon-512.png"),
   asset("icon-maskable-192.png"),
   asset("icon-maskable-512.png"),
+  asset("install/index.html"),
 ]
 
 self.addEventListener("install", (event) => {
@@ -45,7 +46,12 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/src/") || url.pathname.startsWith("/@") || url.pathname.includes("node_modules")) return
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request, asset("index.html")))
+    const path = url.pathname
+    const install =
+      path === `${BASE}install` ||
+      path === `${BASE}install/` ||
+      path === `${BASE}install/index.html`
+    event.respondWith(networkFirst(request, install ? asset("install/index.html") : asset("index.html")))
     return
   }
   event.respondWith(staleWhileRevalidate(request))
