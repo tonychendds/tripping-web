@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { parseScreenshot } from "./parse-screenshot.js"
+import { ianaZones, parseScreenshot, zoneForPlace } from "./parse-screenshot.js"
 
 const zone = "America/Los_Angeles"
 
@@ -116,6 +116,18 @@ Manage My Trips`
   assert.equal(parsed.trip.currency, "JPY")
   assert.equal(parsed.trip.timezone, "Asia/Tokyo")
   assert.equal(parsed.item.arrival.local, "2026-12-01T14:00")
+})
+
+test("Bangkok and Thailand resolve to Asia/Bangkok, and the zone list is the IANA set", () => {
+  assert.equal(zoneForPlace("Bangkok", "Thailand"), "Asia/Bangkok")
+  assert.equal(zoneForPlace("", "Thailand"), "Asia/Bangkok")
+  assert.equal(zoneForPlace("Bangkok", "Japan"), "Asia/Tokyo")
+  assert.equal(zoneForPlace("Tokyo", ""), "Asia/Tokyo")
+  const zones = ianaZones()
+  assert.ok(zones.includes("Asia/Bangkok"))
+  assert.ok(zones.includes("Asia/Tokyo"))
+  assert.ok(zones.length > 100)
+  assert.equal(zones.includes("Ict"), false)
 })
 
 test("Bangkok is the destination when the airport code is missed but the To city is not", () => {

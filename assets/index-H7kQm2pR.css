@@ -12,3 +12,11 @@
   .topbar .brand h1{font-size:1.85rem}
   .topbar .brand-mark{width:44px;height:44px}
 }
+.tz-field{gap:6px;display:grid}
+.tz-field > span{color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-size:.78rem;font-weight:650}
+.tz-value,.tz-search{border:1px solid var(--line);background:var(--bg);width:100%;min-height:48px;color:var(--ink);font:inherit;border-radius:12px;padding:8px 12px;text-align:left}
+.tz-panel{margin-top:4px}
+.tz-list{max-height:240px;overflow:auto;margin:8px 0 0;padding:0;list-style:none;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.tz-list button{width:100%;text-align:left;background:transparent;border:0;color:var(--ink);min-height:40px;padding:8px 10px;border-radius:0}
+.tz-list button[aria-selected="true"],.tz-list button:hover{background:color-mix(in srgb, var(--accent) 18%, transparent)}
+.tz-empty{color:var(--muted);padding:8px 10px}
