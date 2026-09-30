@@ -1,7 +1,7 @@
 {
   "name": "Tripping",
   "short_name": "Tripping",
-  "description": "Tony’s upcoming trips, in order, with local times at each stop.",
+  "description": "A trip itinerary that stays in this browser.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
