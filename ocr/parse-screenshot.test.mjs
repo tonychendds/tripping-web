@@ -130,6 +130,146 @@ test("Bangkok and Thailand resolve to Asia/Bangkok, and the zone list is the IAN
   assert.equal(zones.includes("Ict"), false)
 })
 
+test("Alaska confirmation without a year prefills the same-day trip and AS 327", () => {
+  const text = `reservations.alaskaair.com
+San Diego, CA SAN
+Sacramento, CA SMF
+1h 41min | Nonstop | 480 miles
+AS 327
+Operated by Alaska
+Check in with Alaska Airlines
+Departs
+Fri, Dec 11 | 8:14 PM
+San Diego, CA
+San Diego International Airport
+Arrives
+Fri, Dec 11 | 9:55 PM
+Sacramento, CA
+Sacramento Intl.
+Saver (X) | No seat(s) selected
+For Saver Fare tickets, seats will be assigned at your departure gate.`
+  const parsed = parseScreenshot(text, zone, new Date(2026, 8, 30))
+  assert.equal(parsed.trip.city, "Sacramento")
+  assert.equal(parsed.trip.country, "United States")
+  assert.equal(parsed.trip.currency, "USD")
+  assert.equal(parsed.trip.timezone, "America/Los_Angeles")
+  assert.equal(parsed.trip.startDate, "2026-12-11")
+  assert.equal(parsed.trip.endDate, "2026-12-11")
+  assert.equal(parsed.item.type, "flight")
+  assert.equal(parsed.item.airline, "Alaska Airlines")
+  assert.equal(parsed.item.flightNumber, "AS 327")
+  assert.equal(parsed.item.departure.airportCode, "SAN")
+  assert.equal(parsed.item.departure.city, "San Diego")
+  assert.equal(parsed.item.departure.local, "2026-12-11T20:14")
+  assert.equal(parsed.item.departure.timezone, "America/Los_Angeles")
+  assert.equal(parsed.item.arrival.airportCode, "SMF")
+  assert.equal(parsed.item.arrival.city, "Sacramento")
+  assert.equal(parsed.item.arrival.local, "2026-12-11T21:55")
+  assert.equal(parsed.item.arrival.timezone, "America/Los_Angeles")
+  assert.equal(parsed.item.seat, "")
+  assert.doesNotMatch(parsed.note, /hotel/i)
+})
+
+test("on-device Alaska OCR still prefills dates when the airport codes are misread", () => {
+  const text = `San Diego, CAsan >
+Sacramento, CA sme
+1h 41min | Nonstop | 480 miles
+@ AS327
+Operated by Alaska
+Check in with Alaska Airlines
+Departs
+Fri, Dec 11| 8:14PM
+San Diego, CA
+San Diego International Airport
+Arrives
+Fri, Dec 11| 9:55PM
+Sacramento, CA
+Sacramento Intl.
+Saver (X) | No seat(s) selected
+For Saver Fare tickets. seats will be assigned at your departure gate.`
+  const parsed = parseScreenshot(text, zone, new Date(2026, 8, 30))
+  assert.equal(parsed.trip.startDate, "2026-12-11")
+  assert.equal(parsed.trip.endDate, "2026-12-11")
+  assert.equal(parsed.item.airline, "Alaska Airlines")
+  assert.equal(parsed.item.flightNumber, "AS 327")
+  assert.equal(parsed.item.departure.airportCode, "SAN")
+  assert.equal(parsed.item.departure.local, "2026-12-11T20:14")
+  assert.equal(parsed.item.arrival.airportCode, "SMF")
+  assert.equal(parsed.item.arrival.local, "2026-12-11T21:55")
+})
+
+test("a month and day that already passed this year uses next year", () => {
+  const text = `AS 327
+San Diego, CA SAN
+Sacramento, CA SMF
+Departs
+Fri, Dec 11 | 8:14 PM
+Arrives
+Fri, Dec 11 | 9:55 PM`
+  const parsed = parseScreenshot(text, zone, new Date(2026, 11, 12))
+  assert.equal(parsed.trip.startDate, "2027-12-11")
+  assert.equal(parsed.trip.endDate, "2027-12-11")
+  assert.equal(parsed.item.departure.local, "2027-12-11T20:14")
+  assert.equal(parsed.item.arrival.local, "2027-12-11T21:55")
+})
+
+test("the same calendar day is kept when that month and day is today", () => {
+  const text = `AS 327
+SAN
+SMF
+Departs
+Fri, Dec 11 | 8:14 PM
+Arrives
+Fri, Dec 11 | 9:55 PM`
+  const parsed = parseScreenshot(text, zone, new Date(2026, 11, 11))
+  assert.equal(parsed.trip.startDate, "2026-12-11")
+  assert.equal(parsed.trip.endDate, "2026-12-11")
+})
+
+test("an arrival in January after a December departure crosses into the next year", () => {
+  const text = `AS 50
+San Diego, CA SAN
+Sacramento, CA SMF
+Departs
+Mon, Dec 30 | 11:00 PM
+Arrives
+Sat, Jan 2 | 6:00 AM`
+  const parsed = parseScreenshot(text, zone, new Date(2026, 8, 30))
+  assert.equal(parsed.trip.startDate, "2026-12-30")
+  assert.equal(parsed.trip.endDate, "2027-01-02")
+  assert.equal(parsed.item.departure.local, "2026-12-30T23:00")
+  assert.equal(parsed.item.arrival.local, "2027-01-02T06:00")
+})
+
+test("an explicit year is kept even when that date is in the past", () => {
+  const text = `AS 100
+SAN SMF
+Departs
+Fri, December 11, 2020 | 8:14 PM
+Arrives
+Fri, December 11, 2020 | 9:55 PM`
+  const parsed = parseScreenshot(text, zone, new Date(2026, 8, 30))
+  assert.equal(parsed.trip.startDate, "2020-12-11")
+  assert.equal(parsed.trip.endDate, "2020-12-11")
+  assert.equal(parsed.item.departure.local, "2020-12-11T20:14")
+  assert.equal(parsed.item.arrival.local, "2020-12-11T21:55")
+})
+
+test("a hotel check-in still prefills when the confirmation is a hotel", () => {
+  const text = `Hilton Sukhumvit
+Bangkok, Thailand
+Check-in: December 18, 2026 3:00 PM
+Check-out: December 20, 2026 11:00 AM
+Confirmation: ABC123`
+  const parsed = parseScreenshot(text, zone, new Date(2026, 8, 30))
+  assert.equal(parsed.item.type, "lodging")
+  assert.equal(parsed.item.name, "Hilton Sukhumvit")
+  assert.equal(parsed.trip.city, "Bangkok")
+  assert.equal(parsed.trip.country, "Thailand")
+  assert.equal(parsed.item.checkIn, "2026-12-18T15:00")
+  assert.equal(parsed.item.checkOut, "2026-12-20T11:00")
+})
+
 test("Bangkok is the destination when the airport code is missed but the To city is not", () => {
   const text = `From: Taipei, TW
 To: Bangkok, TH
