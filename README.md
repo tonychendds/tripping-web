@@ -6,4 +6,4 @@ Everything you enter stays in your own browser on your own device. Nothing is se
 
 A fresh visit starts with an empty itinerary. There is no published personal trip file. **Add trip** saves only in that browser. Use **Export** if you want a backup, and **Import** to bring one back. Do not put a real itinerary in the site files.
 
-This repository only holds the published website files. The default seed in `assets/index-m7Empty26.js` is an empty `trips` array.
+This repository only holds the published website files. The default seed in `assets/index-m7Home27.js` is an empty `trips` array.
