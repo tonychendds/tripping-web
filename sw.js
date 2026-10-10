@@ -1,4 +1,4 @@
-const CACHE = "tripping-shell-v10"
+const CACHE = "tripping-shell-v11"
 const BASE = new URL("./", self.location).pathname
 const asset = (path) => `${BASE}${path}`
 const PRECACHE = [
@@ -15,6 +15,7 @@ const PRECACHE = [
   asset("icon-512.png"),
   asset("icon-maskable-192.png"),
   asset("icon-maskable-512.png"),
+  asset("assets/sync.js"),
 ]
 
 self.addEventListener("install", (event) => {

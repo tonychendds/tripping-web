@@ -20,3 +20,4 @@
 .tz-list button{width:100%;text-align:left;background:transparent;border:0;color:var(--ink);min-height:40px;padding:8px 10px;border-radius:0}
 .tz-list button[aria-selected="true"],.tz-list button:hover{background:color-mix(in srgb, var(--accent) 18%, transparent)}
 .tz-empty{color:var(--muted);padding:8px 10px}
+button svg,button img,.google-button svg,.icon-tool svg,.kind-icon svg,.module-icon svg{pointer-events:none}

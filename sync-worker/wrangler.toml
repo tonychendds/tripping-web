@@ -1,0 +1,13 @@
+name = "tripping-sync"
+main = "src/index.ts"
+compatibility_date = "2026-03-01"
+workers_dev = true
+
+# Create the database once, then paste its id here:
+#   npx wrangler d1 create tripping-sync
+# The id below is a placeholder. Do not commit a real database id.
+[[d1_databases]]
+binding = "DB"
+database_name = "tripping-sync"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
