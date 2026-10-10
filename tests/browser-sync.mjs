@@ -22,13 +22,10 @@ async function shot(page, name) {
 
 async function enterApp(page) {
   await page.goto(site, { waitUntil: "networkidle0" });
-  const demo = await page.$("#continue-demo");
-  if (demo) {
-    await demo.click();
-    await page.waitForSelector("#setup-done", { timeout: 10000 });
-  }
-  const setup = await page.$("#setup-done");
-  if (setup) await setup.click();
+  const skip = await page.$("#continue-without-account");
+  if (skip) await skip.click();
+  else if (await page.$("#continue-demo")) await page.evaluate(() => document.getElementById("continue-demo")?.click());
+  if (await page.$("#setup-done")) await page.click("#setup-done");
   await page.waitForSelector("#open-settings", { timeout: 10000 });
 }
 
@@ -226,7 +223,8 @@ try {
   assert(!stillThere, "deleted trip came back after reload");
   await page.reload({ waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector("#open-settings") || document.querySelector("#sign-in") || document.querySelector("#setup-done"));
-  if (await page.$("#continue-demo")) await page.click("#continue-demo");
+  if (await page.$("#continue-without-account")) await page.click("#continue-without-account");
+  else if (await page.$("#continue-demo")) await page.evaluate(() => document.getElementById("continue-demo")?.click());
   if (await page.$("#setup-done")) await page.click("#setup-done");
   await page.waitForSelector("#open-settings");
   const onFirst = await page.evaluate((name) => document.body.innerText.includes(name), tripName);

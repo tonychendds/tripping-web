@@ -6,6 +6,25 @@ export const META_KEY = "tripping-sync-meta";
 export const ORIGIN_KEY = "tripping-deal-origin";
 export const DEFAULT_ORIGIN = "SMF";
 export const ORIGIN_PRESETS = ["SMF", "SFO"];
+export const DEVICE_CARD = "Saved on this device.";
+export const ACCOUNT_CARD = "Saved to your account.";
+export const DEVICE_EYEBROW = "On this device";
+export const ACCOUNT_EYEBROW = "Your account";
+export const DEVICE_FORM =
+  "Saved in this browser, not in the trip file. Currency fills in from the country when it can.";
+export const ACCOUNT_FORM =
+  "Saved to your account and synced across your devices. Currency fills in from the country when it can.";
+
+export function accountFacingText(signedIn, text, role) {
+  const pairs = {
+    card: [DEVICE_CARD, ACCOUNT_CARD],
+    eyebrow: [DEVICE_EYEBROW, ACCOUNT_EYEBROW],
+    form: [DEVICE_FORM, ACCOUNT_FORM],
+  };
+  const pair = pairs[role];
+  if (!pair || (text !== pair[0] && text !== pair[1])) return text;
+  return signedIn ? pair[1] : pair[0];
+}
 
 const PRICE_HINT =
   "On the Google Flights page, turn on Track prices (the bell or the Track prices switch). Google emails you when the fare changes. Tripping only opens the search. It does not call a paid fare API.";
@@ -338,7 +357,7 @@ function chromeCss() {
     .account-grid, .deal-search { display: grid; gap: 10px; }
     .account-grid label, .deal-search label { display: grid; gap: 6px; }
     .account-grid span, .deal-search span, .deal-kicker { color: var(--muted, #4d6270); letter-spacing: .08em; text-transform: uppercase; font-size: .78rem; font-weight: 650; }
-    .account-panel input, .deals-panel input { border: 1px solid var(--line, #d5e2e8); background: var(--bg, #f3f7f8); color: inherit; font: inherit; border-radius: 12px; min-height: 48px; padding: 8px 12px; }
+    .account-panel input, .deals-panel input, #tripping-gate input { border: 1px solid var(--line, #d5e2e8); background: var(--bg, #f3f7f8); color: inherit; font: inherit; border-radius: 12px; min-height: 48px; padding: 8px 12px; }
     .account-actions, .deal-links, .origin-presets { display: flex; flex-wrap: wrap; gap: 8px; }
     .account-actions button, .deal-links a, .origin-presets button { border: 1px solid var(--line, #d5e2e8); background: var(--card, #fff); color: var(--ink, #12202c); border-radius: 999px; min-height: 44px; padding: 0 14px; font: inherit; font-weight: 650; text-decoration: none; display: inline-flex; align-items: center; }
     .account-actions button.primary, .deal-links a.primary { background: var(--accent, #0c5e88); color: var(--on-accent, #f7fbfc); border: 0; }
@@ -348,6 +367,11 @@ function chromeCss() {
     .deal-card { border-top: 1px solid var(--line, #d5e2e8); padding-top: 12px; display: grid; gap: 8px; }
     .deal-hint { color: var(--muted, #4d6270); margin: 0; max-width: 68ch; }
     body.deals-mode #root { display: none; }
+    body.gate-open #tripping-chrome { display: none; }
+    #tripping-gate { margin-top: 8vh; }
+    #tripping-gate .account-grid { margin-top: 4px; grid-template-columns: 1fr; }
+    #tripping-gate .gate-skip { justify-self: start; background: transparent; color: var(--ink, #12202c); border: 1px solid var(--line, #d5e2e8); }
+    #sign-in.gate { display: none !important; }
     button svg, button img, .google-button svg, .icon-tool svg, .kind-icon svg, .module-icon svg { pointer-events: none; }
     @media (width >= 720px) { .account-grid, .deal-search { grid-template-columns: 1fr 1fr; } .deal-search .wide { grid-column: 1 / -1; } }
   `;
@@ -357,9 +381,125 @@ function appReady() {
   return Boolean(document.querySelector(".wrap, #settings"));
 }
 
+function dismissGate() {
+  sessionStorage.setItem("tripping-demo-entered", "1");
+  document.getElementById("continue-demo")?.click();
+  window.setTimeout(() => {
+    if (document.querySelector("main#sign-in.gate")) location.reload();
+  }, 0);
+}
+
+function renderGate() {
+  const gate = document.querySelector("main#sign-in.gate");
+  const splash = document.getElementById("tripping-gate");
+  if (!gate) {
+    splash?.remove();
+    document.body.classList.remove("gate-open");
+    return;
+  }
+  document.body.classList.add("gate-open");
+  if (readSession()) {
+    dismissGate();
+    return;
+  }
+  if (splash) return;
+  const panel = document.createElement("main");
+  panel.id = "tripping-gate";
+  panel.className = "gate";
+  const mark = document.createElement("img");
+  mark.className = "gate-mark";
+  mark.src = "/tripping-web/icon.svg";
+  mark.alt = "";
+  mark.width = 88;
+  mark.height = 88;
+  const kicker = document.createElement("p");
+  kicker.className = "brand-kicker";
+  kicker.textContent = "Tripping";
+  const title = document.createElement("h1");
+  title.textContent = "Your trips, on every device";
+  const copy = document.createElement("p");
+  copy.className = "gate-copy";
+  copy.textContent = "Sign in or create an account with your email so trips stay with that account. Continue without an account and they stay on this device only.";
+  const status = document.createElement("p");
+  status.className = "sync-status";
+  status.id = "account-status";
+  const form = document.createElement("form");
+  form.className = "account-grid";
+  form.id = "gate-form";
+  form.append(
+    field("Email", "account-email", "email", "", "email"),
+    field("Password", "account-password", "password", "", "current-password"),
+  );
+  const email = form.querySelector("#account-email");
+  if (email instanceof HTMLInputElement) email.autofocus = true;
+  const actions = document.createElement("div");
+  actions.className = "account-actions";
+  const signIn = document.createElement("button");
+  signIn.type = "submit";
+  signIn.className = "primary";
+  signIn.id = "gate-sign-in";
+  signIn.textContent = "Sign in";
+  const create = document.createElement("button");
+  create.type = "button";
+  create.id = "gate-create-account";
+  create.textContent = "Create account";
+  actions.append(signIn, create);
+  form.append(status, actions);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void submitAuth("login");
+  });
+  create.addEventListener("click", () => {
+    if (!form.reportValidity()) return;
+    void submitAuth("register");
+  });
+  const skip = document.createElement("button");
+  skip.type = "button";
+  skip.className = "gate-continue gate-skip";
+  skip.id = "continue-without-account";
+  skip.textContent = "Continue without an account";
+  skip.addEventListener("click", () => dismissGate());
+  const note = document.createElement("p");
+  note.className = "gate-note";
+  note.textContent = "Without an account, trips stay on this device.";
+  const privacy = document.createElement("a");
+  privacy.className = "gate-privacy";
+  privacy.href = "#/privacy";
+  privacy.textContent = "Privacy";
+  panel.append(mark, kicker, title, copy, form, skip, note, privacy);
+  document.body.prepend(panel);
+}
+
+function paintAccountCopy() {
+  const root = document.getElementById("root");
+  if (!root) return;
+  const signedIn = Boolean(readSession());
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let current = walker.nextNode();
+  while (current) {
+    nodes.push(current);
+    current = walker.nextNode();
+  }
+  for (const node of nodes) {
+    const parent = node.parentElement;
+    const text = node.nodeValue ?? "";
+    if (!parent) continue;
+    let role = "";
+    if (parent.classList.contains("source-note")) role = "card";
+    else if (parent.classList.contains("eyebrow") && parent.parentElement?.querySelector("#trip-form-title")) role = "eyebrow";
+    else if (parent.classList.contains("trip-notes")) role = "form";
+    if (!role) continue;
+    const next = accountFacingText(signedIn, text, role);
+    if (next !== text) node.nodeValue = next;
+  }
+}
+
 function renderChrome() {
   const host = document.getElementById("tripping-chrome");
   if (!host) return;
+  paintAccountCopy();
+  renderGate();
   const ready = appReady();
   host.hidden = !ready;
   if (!ready) return;
@@ -887,8 +1027,10 @@ async function submitAuth(kind) {
   writeSession({ token: result.token, email: result.email });
   writeRevision(result.email, 0);
   setStatus("Signed in. Syncing trips…");
+  dismissGate();
   renderChrome();
   await syncNow();
+  dismissGate();
   renderChrome();
 }
 
