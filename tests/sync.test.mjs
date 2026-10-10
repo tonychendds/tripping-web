@@ -17,6 +17,10 @@ import {
   tripSearch,
   upcomingTrips,
   accountFacingText,
+  shareFacingText,
+  SHARE_INTRO,
+  SHARE_SIGNED_IN,
+  SHARE_SIGNED_OUT,
   ACCOUNT_CARD,
   ACCOUNT_EYEBROW,
   ACCOUNT_FORM,
@@ -138,8 +142,26 @@ test("signed-in copy names the account and signed-out copy stays on the device",
   assert.equal(accountFacingText(false, ACCOUNT_EYEBROW, "eyebrow"), DEVICE_EYEBROW);
   assert.equal(accountFacingText(true, DEVICE_FORM, "form"), ACCOUNT_FORM);
   assert.equal(accountFacingText(false, ACCOUNT_FORM, "form"), DEVICE_FORM);
-  assert.equal(accountFacingText(true, "Saved on this device. The file copy is unchanged.", "card"), "Saved on this device. The file copy is unchanged.");
+  assert.equal(accountFacingText(true, "Saved on this device. The file copy is unchanged.", "card"), ACCOUNT_CARD);
+  assert.equal(accountFacingText(true, "From the trip file.", "card"), ACCOUNT_CARD);
+  assert.equal(accountFacingText(false, "From the trip file.", "card"), "From the trip file.");
   assert.equal(accountFacingText(true, "Edit on this device", "card"), "Edit on this device");
+  assert.equal(
+    shareFacingText(true, "Demo mode keeps this list on this device. Sign in and the invite is stored for their account."),
+    SHARE_SIGNED_IN,
+  );
+  assert.equal(
+    shareFacingText(false, "Demo mode keeps this list on this device. Sign in and the invite is stored for their account."),
+    SHARE_SIGNED_OUT,
+  );
+  assert.equal(
+    shareFacingText(
+      true,
+      "Invite a spouse or a kid by email. A viewer can check the packing list. An editor can change the itinerary. They sign in with Google to open the trip.",
+    ),
+    SHARE_INTRO,
+  );
+  assert.doesNotMatch(SHARE_SIGNED_IN + SHARE_SIGNED_OUT + SHARE_INTRO, /Demo mode|Sign in with Google/);
   const client = fs.readFileSync(new URL("../assets/sync.js", import.meta.url), "utf8");
   assert.match(client, /Continue without an account/);
   assert.doesNotMatch(client, /Sign in with Google/);
@@ -149,7 +171,7 @@ test("the public seed and service worker stay safe", () => {
   const bundle = fs.readFileSync(new URL("../assets/index-m7Home27.js", import.meta.url), "utf8");
   assert.match(bundle, /exampleData:!1,note:`This public page does not include a personal itinerary\.[^`]*`\},trips:\[\]/);
   const worker = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /tripping-shell-v12/);
+  assert.match(worker, /tripping-shell-v13/);
   assert.doesNotMatch(worker, /client\.navigate/);
   const toml = fs.readFileSync(new URL("../sync-worker/wrangler.toml", import.meta.url), "utf8");
   assert.match(toml, /database_id = "00000000-0000-0000-0000-000000000000"/);
