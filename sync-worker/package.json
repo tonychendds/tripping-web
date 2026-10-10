@@ -1,0 +1,12 @@
+{
+  "name": "tripping-sync",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787 --local",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  }
+}
