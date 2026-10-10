@@ -15,15 +15,38 @@ export const DEVICE_FORM =
 export const ACCOUNT_FORM =
   "Saved to your account and synced across your devices. Currency fills in from the country when it can.";
 
+const DEVICE_CARD_VARIANTS = [
+  DEVICE_CARD,
+  "Saved on this device. The file copy is unchanged.",
+  "From the trip file.",
+];
+const DEMO_SHARE = "Demo mode keeps this list on this device. Sign in and the invite is stored for their account.";
+const GOOGLE_SHARE =
+  "Invite a spouse or a kid by email. A viewer can check the packing list. An editor can change the itinerary. They sign in with Google to open the trip.";
+export const SHARE_SIGNED_IN = "Sharing stays on this device. Invites are not saved with your account.";
+export const SHARE_SIGNED_OUT = "Invites stay on this device. They are not saved with an account.";
+export const SHARE_INTRO =
+  "Invite a spouse or a kid by email. A viewer can check the packing list. An editor can change the itinerary. This list stays on this device.";
+
 export function accountFacingText(signedIn, text, role) {
+  if (role === "card") {
+    if (signedIn && DEVICE_CARD_VARIANTS.includes(text)) return ACCOUNT_CARD;
+    if (!signedIn && text === ACCOUNT_CARD) return DEVICE_CARD;
+    return text;
+  }
   const pairs = {
-    card: [DEVICE_CARD, ACCOUNT_CARD],
     eyebrow: [DEVICE_EYEBROW, ACCOUNT_EYEBROW],
     form: [DEVICE_FORM, ACCOUNT_FORM],
   };
   const pair = pairs[role];
   if (!pair || (text !== pair[0] && text !== pair[1])) return text;
   return signedIn ? pair[1] : pair[0];
+}
+
+export function shareFacingText(signedIn, text) {
+  if (text === GOOGLE_SHARE || text === SHARE_INTRO) return SHARE_INTRO;
+  if (text === DEMO_SHARE || text === SHARE_SIGNED_IN || text === SHARE_SIGNED_OUT) return signedIn ? SHARE_SIGNED_IN : SHARE_SIGNED_OUT;
+  return text;
 }
 
 const PRICE_HINT =
@@ -318,7 +341,7 @@ function startApp() {
   const root = document.getElementById("root");
   if (root) {
     const observer = new MutationObserver(() => renderChrome());
-    observer.observe(root, { childList: true, subtree: true });
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
   }
   window.addEventListener("hashchange", () => {
     if (location.hash === "#/deals") currentView = "deals";
@@ -492,6 +515,10 @@ function paintAccountCopy() {
     if (!role) continue;
     const next = accountFacingText(signedIn, text, role);
     if (next !== text) node.nodeValue = next;
+  }
+  for (const paragraph of root.querySelectorAll("[data-share] p")) {
+    const next = shareFacingText(signedIn, paragraph.textContent || "");
+    if (next !== paragraph.textContent) paragraph.textContent = next;
   }
 }
 
