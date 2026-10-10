@@ -1,4 +1,4 @@
-const CACHE = "tripping-shell-v11"
+const CACHE = "tripping-shell-v12"
 const BASE = new URL("./", self.location).pathname
 const asset = (path) => `${BASE}${path}`
 const PRECACHE = [

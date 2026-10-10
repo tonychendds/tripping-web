@@ -16,6 +16,13 @@ import {
   skyscannerUrl,
   tripSearch,
   upcomingTrips,
+  accountFacingText,
+  ACCOUNT_CARD,
+  ACCOUNT_EYEBROW,
+  ACCOUNT_FORM,
+  DEVICE_CARD,
+  DEVICE_EYEBROW,
+  DEVICE_FORM,
 } from "../assets/sync.js";
 
 function trip(id, title, extra = {}) {
@@ -124,11 +131,25 @@ test("upcoming trips use the flight airports when they exist", () => {
   assert.equal(search.ret, "2026-12-08");
 });
 
+test("signed-in copy names the account and signed-out copy stays on the device", () => {
+  assert.equal(accountFacingText(true, DEVICE_CARD, "card"), ACCOUNT_CARD);
+  assert.equal(accountFacingText(false, ACCOUNT_CARD, "card"), DEVICE_CARD);
+  assert.equal(accountFacingText(true, DEVICE_EYEBROW, "eyebrow"), ACCOUNT_EYEBROW);
+  assert.equal(accountFacingText(false, ACCOUNT_EYEBROW, "eyebrow"), DEVICE_EYEBROW);
+  assert.equal(accountFacingText(true, DEVICE_FORM, "form"), ACCOUNT_FORM);
+  assert.equal(accountFacingText(false, ACCOUNT_FORM, "form"), DEVICE_FORM);
+  assert.equal(accountFacingText(true, "Saved on this device. The file copy is unchanged.", "card"), "Saved on this device. The file copy is unchanged.");
+  assert.equal(accountFacingText(true, "Edit on this device", "card"), "Edit on this device");
+  const client = fs.readFileSync(new URL("../assets/sync.js", import.meta.url), "utf8");
+  assert.match(client, /Continue without an account/);
+  assert.doesNotMatch(client, /Sign in with Google/);
+});
+
 test("the public seed and service worker stay safe", () => {
   const bundle = fs.readFileSync(new URL("../assets/index-m7Home27.js", import.meta.url), "utf8");
   assert.match(bundle, /exampleData:!1,note:`This public page does not include a personal itinerary\.[^`]*`\},trips:\[\]/);
   const worker = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /tripping-shell-v11/);
+  assert.match(worker, /tripping-shell-v12/);
   assert.doesNotMatch(worker, /client\.navigate/);
   const toml = fs.readFileSync(new URL("../sync-worker/wrangler.toml", import.meta.url), "utf8");
   assert.match(toml, /database_id = "00000000-0000-0000-0000-000000000000"/);
