@@ -234,6 +234,69 @@ export function planSync(local, remote) {
   return { action: "sync", book: merged, baseRevision: revision, upload, apply };
 }
 
+export function countTrips(book) {
+  if (!book) return 0;
+  return listTrips(book.manual ? book.manual : book).length;
+}
+
+export function guardBookSizes(localCount, serverCount) {
+  if (serverCount <= 0) return { action: "upload" };
+  if (localCount <= 0) return { action: "pull" };
+  if (localCount * 2 < serverCount) return { action: "choose", localCount, serverCount };
+  return { action: "merge" };
+}
+
+export function signInAction(localCount, serverCount, choice = "server") {
+  const decision = guardBookSizes(localCount, serverCount);
+  if (decision.action === "pull") return "pull";
+  if (decision.action === "choose") return choice === "device" ? "replace" : "pull";
+  return decision.action;
+}
+
+export function bookKeepingDevice(local, remote, now = Date.now()) {
+  const localBook = local?.manual ? bookFrom(local.manual, local) : bookFrom(emptyManual(), emptyMeta());
+  const manual = normalizeManual(localBook.manual);
+  const kept = new Set([...manual.added.map((trip) => trip.id), ...Object.keys(manual.overrides)]);
+  const tombstones = { ...stampMap(localBook.tombstones) };
+  const remoteManual = normalizeManual(remote?.manual);
+  for (const trip of [...remoteManual.added, ...Object.values(remoteManual.overrides)]) {
+    if (trip?.id && !kept.has(trip.id)) tombstones[trip.id] = now;
+  }
+  return { version: 1, manual, tombstones, updatedAt: stampMap(localBook.updatedAt) };
+}
+
+const PERSIST_EVENT = "tripping-storage-persist";
+let persistState = "unknown";
+
+export function persistLabel(state = persistState) {
+  if (state === "persisted") return "Storage: persistent";
+  if (state === "temporary") return "Storage: not persistent";
+  if (state === "unavailable") return "Storage: not available";
+  return "Storage: checking";
+}
+
+function setPersistState(state) {
+  persistState = state;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(PERSIST_EVENT));
+}
+
+export async function requestPersistentStorage() {
+  const storage = typeof navigator === "undefined" ? undefined : navigator.storage;
+  if (!storage || typeof storage.persist !== "function" || typeof storage.persisted !== "function") {
+    setPersistState("unavailable");
+    return "unavailable";
+  }
+  try {
+    await storage.persist();
+    const state = (await storage.persisted()) ? "persisted" : "temporary";
+    setPersistState(state);
+    return state;
+  } catch {
+    setPersistState("unavailable");
+    return "unavailable";
+  }
+}
+
 function placeToken(value) {
   const trimmed = String(value || "").trim();
   if (/^[A-Za-z]{3}$/.test(trimmed)) return trimmed.toUpperCase();
@@ -362,6 +425,8 @@ function startApp() {
     },
     true,
   );
+  window.addEventListener(PERSIST_EVENT, () => renderChrome());
+  void requestPersistentStorage();
   if (readSession()) void syncNow();
 }
 
@@ -395,6 +460,14 @@ function chromeCss() {
     #tripping-gate .account-grid { margin-top: 4px; grid-template-columns: 1fr; }
     #tripping-gate .gate-skip { justify-self: start; background: transparent; color: var(--ink, #12202c); border: 1px solid var(--line, #d5e2e8); }
     #sign-in.gate { display: none !important; }
+    .restore-card { border: 1px solid var(--accent, #0c5e88); background: color-mix(in srgb, var(--accent, #0c5e88) 14%, var(--card, #fff)); color: var(--ink, #12202c); border-radius: 18px; margin: 0 0 16px; padding: 16px; display: grid; gap: 8px; }
+    .restore-card h2 { font-family: var(--serif, Georgia, serif); font-weight: 560; letter-spacing: -0.03em; font-size: 1.45rem; margin: 0; }
+    .restore-card p { margin: 0; }
+    .restore-card a { justify-self: start; background: var(--accent, #0c5e88); color: var(--on-accent, #f7fbfc); border-radius: 999px; min-height: 44px; padding: 0 16px; font: inherit; font-weight: 650; text-decoration: none; display: inline-flex; align-items: center; }
+    .book-choice-backdrop { position: fixed; inset: 0; z-index: 80; background: color-mix(in srgb, #071E36 48%, transparent); display: grid; place-items: center; padding: 16px; }
+    .book-choice { width: min(440px, 100%); border: 1px solid var(--line, #d5e2e8); background: var(--card, #fff); color: var(--ink, #12202c); border-radius: 18px; padding: 16px; display: grid; gap: 12px; }
+    .book-choice h2 { font-family: var(--serif, Georgia, serif); font-weight: 560; letter-spacing: -0.03em; font-size: 1.5rem; margin: 0; }
+    .book-choice p { margin: 0; }
     button svg, button img, .google-button svg, .icon-tool svg, .kind-icon svg, .module-icon svg { pointer-events: none; }
     @media (width >= 720px) { .account-grid, .deal-search { grid-template-columns: 1fr 1fr; } .deal-search .wide { grid-column: 1 / -1; } }
   `;
@@ -529,12 +602,13 @@ function renderChrome() {
   renderGate();
   const ready = appReady();
   host.hidden = !ready;
+  renderRestoreCard(ready);
   if (!ready) return;
   const session = readSession();
   const settings = location.hash === "#/settings" || location.hash === "#/review";
   const deals = !settings && (currentView === "deals" || location.hash === "#/deals");
   document.body.classList.toggle("deals-mode", deals);
-  const signature = `${ready}|${session?.email || ""}|${settings}|${deals}|${readOrigin()}|${listTrips(readManual())
+  const signature = `${ready}|${session?.email || ""}|${settings}|${deals}|${persistState}|${readOrigin()}|${listTrips(readManual())
     .map((trip) => trip.id)
     .join(",")}`;
   if (host.dataset.signature === signature) return;
@@ -561,6 +635,99 @@ function renderChrome() {
   if (settings) host.append(accountPanel(session, accountEmail, accountPassword));
   if (deals) host.append(dealsPanel());
   if (focusId) document.getElementById(focusId)?.focus();
+}
+
+function renderRestoreCard(ready) {
+  const existing = document.getElementById("restore-card");
+  const home = location.hash !== "#/settings" && location.hash !== "#/review" && location.hash !== "#/deals" && currentView !== "deals";
+  const empty = listTrips(readManual()).length === 0;
+  const hero = document.querySelector("#main .hero");
+  const show = ready && home && empty && !readSession() && !document.body.classList.contains("gate-open") && hero;
+  if (!show) {
+    existing?.remove();
+    return;
+  }
+  if (existing?.isConnected) return;
+  existing?.remove();
+  const card = document.createElement("section");
+  card.id = "restore-card";
+  card.className = "restore-card";
+  card.setAttribute("data-restore-card", "true");
+  const title = document.createElement("h2");
+  title.textContent = "Sign in to restore your trips";
+  const copy = document.createElement("p");
+  copy.textContent = "This browser has no trips. Sign in and the trips saved to your account are copied back here.";
+  const link = document.createElement("a");
+  link.id = "restore-sign-in";
+  link.href = "#/settings";
+  link.textContent = "Sign in";
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    currentView = "itinerary";
+    location.hash = "#/settings";
+    renderChrome();
+    document.getElementById("account-email")?.focus();
+  });
+  card.append(title, copy, link);
+  hero.parentElement?.insertBefore(card, hero);
+}
+
+function askBookChoice(localCount, serverCount) {
+  if (typeof document === "undefined") return Promise.resolve("server");
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (choice) => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener("keydown", onKey);
+      dialog.remove();
+      resolve(choice === "device" ? "device" : "server");
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") finish("server");
+    };
+    const dialog = document.createElement("div");
+    dialog.className = "book-choice-backdrop";
+    dialog.id = "book-choice";
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) finish("server");
+    });
+    const panel = document.createElement("form");
+    panel.className = "book-choice";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-labelledby", "book-choice-title");
+    const title = document.createElement("h2");
+    title.id = "book-choice-title";
+    title.textContent = "Keep the server trips?";
+    const copy = document.createElement("p");
+    const localLabel = localCount === 1 ? "trip" : "trips";
+    const serverLabel = serverCount === 1 ? "trip" : "trips";
+    copy.textContent = `This device has ${localCount} ${localLabel}. Your account has ${serverCount} ${serverLabel}. Keep the server trips unless this device is the copy you mean to keep.`;
+    const actions = document.createElement("div");
+    actions.className = "account-actions";
+    const device = document.createElement("button");
+    device.type = "button";
+    device.id = "keep-device";
+    device.textContent = "Keep this device";
+    device.addEventListener("click", () => finish("device"));
+    const server = document.createElement("button");
+    server.type = "submit";
+    server.className = "primary";
+    server.id = "keep-server";
+    server.autofocus = true;
+    server.textContent = "Keep server";
+    actions.append(device, server);
+    panel.append(title, copy, actions);
+    panel.addEventListener("submit", (event) => {
+      event.preventDefault();
+      finish("server");
+    });
+    dialog.append(panel);
+    document.addEventListener("keydown", onKey);
+    document.body.append(dialog);
+    server.focus();
+  });
 }
 
 let currentView = typeof location !== "undefined" && location.hash === "#/deals" ? "deals" : "itinerary";
@@ -593,7 +760,12 @@ function accountPanel(session, emailValue, passwordValue) {
   panel.id = "account-panel";
   const title = document.createElement("h2");
   title.textContent = "Account";
-  panel.append(title);
+  const storage = document.createElement("p");
+  storage.className = "sync-status";
+  storage.id = "storage-persist";
+  storage.dataset.storagePersist = persistState;
+  storage.textContent = persistLabel();
+  panel.append(title, storage);
   const status = document.createElement("p");
   status.className = "sync-status";
   status.id = "account-status";
@@ -953,6 +1125,7 @@ async function syncOnce(session) {
     setStatus(remote.error || "Sync didn't finish. Trips are still on this device.", true);
     return;
   }
+  if (readRevision(session.email) === 0 && (await guardSignIn(session, local, remote))) return;
   let plan = planSync(local, remote);
   if (plan.action === "noop") {
     writeRevision(session.email, remote.revision);
@@ -1004,6 +1177,45 @@ async function syncOnce(session) {
     }
   }
   setStatus("Saved to your account.");
+}
+
+async function guardSignIn(session, local, remote) {
+  const localCount = countTrips(local);
+  const serverCount = countTrips(remote.book);
+  const decision = guardBookSizes(localCount, serverCount);
+  if (decision.action === "upload" || decision.action === "merge") return false;
+  const choice = decision.action === "choose" ? await askBookChoice(localCount, serverCount) : "server";
+  if (signInAction(localCount, serverCount, choice) === "replace") {
+    await uploadDeviceBook(session, local, remote);
+    return true;
+  }
+  await restoreServerBook(session, remote);
+  return true;
+}
+
+async function restoreServerBook(session, remote) {
+  const changed = remote.book ? applyLocal(remote.book, session.email) : false;
+  writeRevision(session.email, remote.revision);
+  setStatus("Trips from your account are on this device.");
+  renderChrome();
+  if (changed) reloadForRemote();
+}
+
+async function uploadDeviceBook(session, local, remote) {
+  const replacement = bookKeepingDevice(local, remote.book);
+  if (isVacant(replacement)) {
+    await restoreServerBook(session, remote);
+    return;
+  }
+  const saved = await putBook(session.token, remote.revision, replacement);
+  if (!saved.ok) {
+    setStatus(saved.error || "Sync didn't finish. Trips are still on this device.", true);
+    return;
+  }
+  applyLocal(replacement, session.email);
+  writeRevision(session.email, saved.revision);
+  setStatus("Saved this device over the trips in your account.");
+  renderChrome();
 }
 
 function applyLocal(book, email) {
