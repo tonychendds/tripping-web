@@ -27,6 +27,11 @@ import {
   DEVICE_CARD,
   DEVICE_EYEBROW,
   DEVICE_FORM,
+  bookKeepingDevice,
+  countTrips,
+  guardBookSizes,
+  persistLabel,
+  signInAction,
 } from "../assets/sync.js";
 
 function trip(id, title, extra = {}) {
@@ -167,11 +172,48 @@ test("signed-in copy names the account and signed-out copy stays on the device",
   assert.doesNotMatch(client, /Sign in with Google/);
 });
 
+test("sign-in on an empty device pulls and a smaller device asks before replacing the server", () => {
+  assert.deepEqual(guardBookSizes(0, 4), { action: "pull" });
+  assert.deepEqual(guardBookSizes(0, 0), { action: "upload" });
+  assert.equal(signInAction(0, 4), "pull");
+  assert.equal(signInAction(0, 4, "device"), "pull");
+  assert.deepEqual(guardBookSizes(1, 4), { action: "choose", localCount: 1, serverCount: 4 });
+  assert.equal(signInAction(1, 4), "pull");
+  assert.equal(signInAction(1, 4, "device"), "replace");
+  assert.equal(guardBookSizes(2, 4).action, "merge");
+  assert.equal(guardBookSizes(1, 2).action, "merge");
+  assert.equal(persistLabel("persisted"), "Storage: persistent");
+  assert.equal(persistLabel("temporary"), "Storage: not persistent");
+
+  const local = bookFrom({ ...emptyManual(), added: [trip("kyoto", "Kyoto")] }, { ...emptyMeta(), updatedAt: { kyoto: 5 } });
+  const remote = bookFrom(
+    { ...emptyManual(), added: [trip("kyoto", "Kyoto"), trip("osaka", "Osaka"), trip("tokyo", "Tokyo"), trip("nara", "Nara")] },
+    { ...emptyMeta(), updatedAt: { kyoto: 5, osaka: 6, tokyo: 7, nara: 8 } },
+  );
+  assert.equal(countTrips(local), 1);
+  assert.equal(countTrips(remote), 4);
+  const kept = bookKeepingDevice(local, remote, 90);
+  assert.deepEqual(kept.manual.added.map((item) => item.id), ["kyoto"]);
+  assert.equal(kept.tombstones.osaka, 90);
+  assert.equal(kept.tombstones.tokyo, 90);
+  assert.equal(kept.tombstones.nara, 90);
+  assert.equal(isVacant(kept), false);
+  const merged = mergeBooks(remote, kept);
+  assert.deepEqual(merged.manual.added.map((item) => item.id), ["kyoto"]);
+
+  const client = fs.readFileSync(new URL("../assets/sync.js", import.meta.url), "utf8");
+  assert.match(client, /navigator\.storage/);
+  assert.match(client, /\.persist\(/);
+  assert.match(client, /Sign in to restore your trips/);
+  assert.match(client, /Keep server/);
+  assert.match(client, /Keep this device/);
+});
+
 test("the public seed and service worker stay safe", () => {
   const bundle = fs.readFileSync(new URL("../assets/index-m7Home27.js", import.meta.url), "utf8");
   assert.match(bundle, /exampleData:!1,note:`This public page does not include a personal itinerary\.[^`]*`\},trips:\[\]/);
   const worker = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /tripping-shell-v13/);
+  assert.match(worker, /tripping-shell-v14/);
   assert.doesNotMatch(worker, /client\.navigate/);
   const toml = fs.readFileSync(new URL("../sync-worker/wrangler.toml", import.meta.url), "utf8");
   assert.match(toml, /database_id = "00000000-0000-0000-0000-000000000000"/);
